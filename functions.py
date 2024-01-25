@@ -21,8 +21,10 @@ chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--disable-dev-shm-usage')
 chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
 driver = webdriver.Chrome(options=chrome_options)
-buy_count = 0
 
+buy_count = 0
+skin_count = 0
+best_float = 100
 
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -36,14 +38,21 @@ def progress_bar(progress, total, urlcount, buycount):
 
     page = actual_page_number()
 
-    print(f"{up}URL No: {urlcount} | Page: {page} | Orders executed: {buycount} | Balance: {check_user_balance()}{clr}\n|{bar}| {percent:.2f}%{clr}\n")
+    print(f"{up}URL No: {urlcount} | Page: {page} | Skins Checked: {skin_count} | Best Float: {best_float} | Orders executed: {buycount} | Balance: {check_user_balance()} {clr}\n|{bar}| {percent:.2f}%{clr}\n ")
 
 
 def check_user_balance():
     """Function that is checking user balance"""
     try:
         user_balance = WebDriverWait(driver, 60).until(ec.presence_of_element_located(PageLocators.USER_BALANCE))
+
+        user_balance_text = user_balance.text.replace(',', '.').replace('€', '').replace(' ', '')
+
+        if user_balance_text == '':
+            return 0
+
         user_balance_edit = float(user_balance.text.replace(',', '.').replace('€', '').replace(' ', '')) 
+        
         return user_balance_edit
     except TimeoutException:
         sys.stderr.write("Can't load user balance.")
@@ -131,8 +140,11 @@ def load_purchase_buttons():
 
 
 def check_whole_page(count, url_info):
+    global best_float
+    global skin_count
+    global buy_count
+
     max_price_reached = False
-    skin_count = 0
     items = items_on_page()
     pages = int(page_count())
     page = 0
@@ -164,6 +176,10 @@ def check_whole_page(count, url_info):
             # Save JSON information
             try:
                 item_name, item_float, item_pattern, whole_json = save_json_response(btn)
+
+                if item_float < best_float:
+                    best_float = item_float
+                
             except (NoSuchElementException, StaleElementReferenceException):
                 continue
 
@@ -242,8 +258,9 @@ def save_json_response(button):
 def check_item_parameters(item_float, item_pattern, whole, count, url_info):
     """Function that will compare user set parameters with skin"""
     match = False
-
+    
     if url_info[count][0] is not None:
+
         if item_float > float(url_info[count][0]):
             return False
 
