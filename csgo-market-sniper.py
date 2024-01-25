@@ -34,3 +34,5 @@ while True:
     driver.get(url_info[count][5])
     check_whole_page(count, url_info)
     count += 1
+
+print("Exiting...")
