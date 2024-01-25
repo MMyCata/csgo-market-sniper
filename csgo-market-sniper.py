@@ -13,7 +13,11 @@ if url_info == None:
     
 count = 0
 
-input("Press enter to start if you are logged in and ready!")
+while True:
+    if (driver.current_url == "https://steamcommunity.com/market/"):
+        break
+    else:
+        time.sleep(1)
 
 # Search loop
 cls()

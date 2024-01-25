@@ -13,6 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 from locators import PageLocators
+from selenium.webdriver.common.by import By
 
 chromedriver_autoinstaller.install()
 chrome_options = Options()
@@ -27,11 +28,13 @@ def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def progress_bar(progress, total, urlcount, buycount, page):
+def progress_bar(progress, total, urlcount, buycount):
     percent = 100 * (progress / float(total))
     bar = chr(9608) * int(percent) + chr(9617) * (100 - int(percent))
     up = "\x1B[3A"
     clr = "\x1B[0K"
+
+    page = actual_page_number()
 
     print(f"{up}URL No: {urlcount} | Page: {page} | Orders executed: {buycount} | Balance: {check_user_balance()}{clr}\n|{bar}| {percent:.2f}%{clr}\n")
 
@@ -40,7 +43,7 @@ def check_user_balance():
     """Function that is checking user balance"""
     try:
         user_balance = WebDriverWait(driver, 60).until(ec.presence_of_element_located(PageLocators.USER_BALANCE))
-        user_balance_edit = (''.join(c for c in user_balance.text if c.isdigit()))
+        user_balance_edit = float(user_balance.text.replace(',', '.').replace('€', '').replace(' ', '')) 
         return user_balance_edit
     except TimeoutException:
         sys.stderr.write("Can't load user balance.")
@@ -98,8 +101,12 @@ def find_next_page():
     """Function that will find next page and will go there"""
     try:
         next_page = WebDriverWait(driver, 5).until(ec.visibility_of_element_located(PageLocators.NEXT_PAGE))
+        
+        current_page_number = actual_page_number()
+        next_page_number = current_page_number + 1
+
         driver.execute_script("arguments[0].click();", next_page)
-        time.sleep(2)
+        WebDriverWait(driver, 60).until(ec.presence_of_element_located((By.XPATH, f'//span[@id="searchResults_links"]/span[text()="{next_page_number} "][contains(@class, "active")]')))
         return True
     except TimeoutException:
         sys.stderr.write("Unable to find next page button. Going to next URL...")
@@ -147,7 +154,7 @@ def check_whole_page(count, url_info):
         for idx, btn in enumerate(buttons):
             skin_count += 1
 
-            progress_bar(skin_count, items, count+1, buy_count, page)
+            progress_bar(skin_count, items, count+1, buy_count)
 
             # Check if max price is reached
             if not check_max_price(idx, price_text_num, count, url_info):
@@ -191,6 +198,7 @@ def check_whole_page(count, url_info):
             find_next_page()
 
 
+
 def save_json_response(button):
     """Function that will save JSON into variables"""
     driver.execute_script("arguments[0].click();", button)
@@ -198,7 +206,24 @@ def save_json_response(button):
     try:
         popup = WebDriverWait(driver, 5).until(ec.presence_of_element_located(PageLocators.POPUP))
         href = popup.get_attribute('href')
-        response = requests.get('https://api.csgofloat.com/?url=' + href)
+
+        url = "https://api.csfloat.com/?url=" + href
+
+        payload = {}
+        headers = {
+        'authority': 'api.csfloat.com',
+        'accept': '*/*',
+        'accept-language': 'en,sv-SE;q=0.9,sv;q=0.8,en-US;q=0.7,hu;q=0.6,ru;q=0.5,zh-CN;q=0.4,zh;q=0.3',
+        'dnt': '1',
+        'origin': 'chrome-extension://jjicbefpemnphinccgikpdaagjebbnhg',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'cross-site',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+
+        response = requests.request("GET", url, headers=headers, data=payload)
+
         response.raise_for_status()
         json_response = response.json()
         json_response_name = str(json_response["iteminfo"]["full_item_name"])
@@ -224,10 +249,6 @@ def check_item_parameters(item_float, item_pattern, whole, count, url_info):
 
     if url_info[count][1] is not None:
         if type(url_info[count][1]) is not int:
-            for pattern in url_info[count][1]:
-                if int(pattern) == item_pattern:
-                    match = True
-                    break
             if not match:
                 return False
 

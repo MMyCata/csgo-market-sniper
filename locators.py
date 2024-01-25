@@ -11,6 +11,8 @@ class PageLocators(object):
     """XPATH"""
     NEXT_PAGE = (By.XPATH, '//span[@id="searchResults_btn_next" and @class="pagebtn"]')
     PRICES_BOX = (By.XPATH, '//span[@class="market_listing_price market_listing_price_with_fee"]')
+    
+    
 
     """CLASS NAME"""
     INSPECT_BUTTON = (By.CLASS_NAME, "market_actionmenu_button")
@@ -22,3 +24,4 @@ class PageLocators(object):
 
     """CSS SELECTOR"""
     POPUP = (By.CSS_SELECTOR, "#market_action_popup_itemactions > a")
+
